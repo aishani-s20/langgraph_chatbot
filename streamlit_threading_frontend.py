@@ -1,5 +1,5 @@
 import streamlit as st
-from langgraph_backend import chatbot
+from langgraph_backend import chatbot, generate_chat_title
 from langchain_core.messages import HumanMessage, AIMessage
 import uuid
 
@@ -15,9 +15,9 @@ def reset_chat():
     add_thread(st.session_state['thread_id'])
     st.session_state['message_history'] = []
 
-def add_thread(thread_id):
+def add_thread(thread_id, title = "New Chat"):
     if thread_id not in st.session_state['chat_threads']:
-        st.session_state['chat_threads'].append(thread_id)
+        st.session_state['chat_threads'][thread_id] = title
 
 def load_conversation(thread_id):
     state = chatbot.get_state(config={'configurable': {'thread_id': thread_id}})
@@ -32,7 +32,7 @@ if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = generate_thread_id()
 
 if 'chat_threads' not in st.session_state:
-    st.session_state['chat_threads'] = []
+    st.session_state['chat_threads'] = {}
 
 add_thread(st.session_state['thread_id'])
 
@@ -44,8 +44,8 @@ if st.sidebar.button('New Chat'):
 
 st.sidebar.header('My Conversations')
 
-for thread_id in st.session_state['chat_threads'][::-1]:
-    if st.sidebar.button(str(thread_id)):
+for thread_id, title in reversed(list(st.session_state['chat_threads'].items())):
+    if st.sidebar.button(title, key=thread_id):
         st.session_state['thread_id'] = thread_id
         messages = load_conversation(thread_id)
 
@@ -71,6 +71,8 @@ for message in st.session_state['message_history']:
 user_input = st.chat_input('Type here')
 
 if user_input:
+    is_first_message = len(st.session_state['message_history']) == 0
+
     CONFIG = {'configurable': {'thread_id': st.session_state['thread_id']}}
     # add message to message_history
     st.session_state['message_history'].append({'role':'user', 'content': user_input})
@@ -88,3 +90,9 @@ if user_input:
 
     st.session_state['message_history'].append({'role': 'assistant', 'content': ai_message})
 
+    if is_first_message:
+        new_title = generate_chat_title(user_input, ai_message)
+        
+        # Update the dictionary with the structured title and refresh the sidebar UI
+        st.session_state['chat_threads'][st.session_state['thread_id']] = new_title
+        st.rerun()
