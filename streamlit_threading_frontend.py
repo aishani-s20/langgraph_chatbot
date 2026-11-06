@@ -1,5 +1,10 @@
 import streamlit as st
-from langgraph_backend import chatbot, generate_chat_title
+from langgraph_database_backend import (
+    chatbot, 
+    generate_chat_title, 
+    save_chat_title, 
+    get_all_chat_titles
+)
 from langchain_core.messages import HumanMessage, AIMessage
 import uuid
 
@@ -7,7 +12,7 @@ import uuid
 # ******************************* utility functions ******************************
 def generate_thread_id():
     thread_id = uuid.uuid4()
-    return thread_id
+    return str(thread_id)
 
 def reset_chat():
     thread_id = generate_thread_id()
@@ -17,7 +22,10 @@ def reset_chat():
 
 def add_thread(thread_id, title = "New Chat"):
     if thread_id not in st.session_state['chat_threads']:
-        st.session_state['chat_threads'][thread_id] = title
+        # Explicitly copy and reassign to force Streamlit to track the mutation
+        updated_threads = dict(st.session_state['chat_threads'])
+        updated_threads[thread_id] = title
+        st.session_state['chat_threads'] = updated_threads
 
 def load_conversation(thread_id):
     state = chatbot.get_state(config={'configurable': {'thread_id': thread_id}})
@@ -32,7 +40,7 @@ if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = generate_thread_id()
 
 if 'chat_threads' not in st.session_state:
-    st.session_state['chat_threads'] = {}
+    st.session_state['chat_threads'] = get_all_chat_titles()
 
 add_thread(st.session_state['thread_id'])
 
@@ -93,6 +101,11 @@ if user_input:
     if is_first_message:
         new_title = generate_chat_title(user_input, ai_message)
         
-        # Update the dictionary with the structured title and refresh the sidebar UI
-        st.session_state['chat_threads'][st.session_state['thread_id']] = new_title
+        # Explicitly copy and reassign the dictionary with the new title
+        updated_threads = dict(st.session_state['chat_threads'])
+        updated_threads[st.session_state['thread_id']] = new_title
+        st.session_state['chat_threads'] = updated_threads
+
+        # Save to SQLite database (persists across app restarts)
+        save_chat_title(st.session_state['thread_id'], new_title)
         st.rerun()

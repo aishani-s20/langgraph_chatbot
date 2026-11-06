@@ -36,7 +36,7 @@ During the development of the advanced frontend (`streamlit_threading_frontend.p
 
 ### 1. Rendering: `st.markdown` vs `st.text`
 
-Initially, `st.text` was used to display messages. However, LLMs frequently output rich text formats, including bolding, lists, and especially **code blocks**.
+Initially, `st.text` was used to display and store messages. However, LLMs frequently output rich text formats, including bolding, lists, and especially **code blocks**.
 
 * **The Problem:** `st.text` renders input as raw, plain text, stripping away formatting. Code snippets become unreadable, flat text blocks.
 
